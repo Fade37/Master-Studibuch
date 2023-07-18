@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Jun 17 11:31:10 2023
-
-@author: Fade
-"""
 import pandas as pd
 import spacy
 from spacy_sentiws import spaCySentiWS
