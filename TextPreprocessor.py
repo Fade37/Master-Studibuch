@@ -37,3 +37,5 @@ class TextPreprocessor():
         # write to file
         df = pd.DataFrame(filtered['paragraphs'])
         df.to_excel(f"D:\OneDrive\Dokumente\MasterThesis\PreAnalysis\data\excel\{excel_name}.xlsx", engine='xlsxwriter')
+
+if __name__ == "__main__":
