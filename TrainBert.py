@@ -7,10 +7,9 @@ from datasets import Dataset
 
 df = pd.read_excel(r"D:\OneDrive\Dokumente\MasterThesis\PreAnalysis\data\excel_merged\data_for_training.xlsx")
 
-sentences = list(df["Satz"])
+sentences = df["Satz"]
 label = df["Klasse"]
 label = label.replace(-1, 2).dropna()
-#label = np.asarray(label)
 
 sentences_train, sentences_test, label_train, label_test = train_test_split(sentences, label, test_size = 0.20, random_state = 0)
 tokenizer = AutoTokenizer.from_pretrained("oliverguhr/german-sentiment-bert")
