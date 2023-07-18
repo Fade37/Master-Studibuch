@@ -39,3 +39,7 @@ class TextPreprocessor():
         df.to_excel(f"D:\OneDrive\Dokumente\MasterThesis\PreAnalysis\data\excel\{excel_name}.xlsx", engine='xlsxwriter')
 
 if __name__ == "__main__":
+    text_preprocessor = TextPreprocessor()
+    for i, j in enumerate(range(1976, 1987), 1):
+        text_preprocessor.text_to_excel(
+            filename=f"lehrerbedarf {i}.txt", excel_name=f"{j}")
