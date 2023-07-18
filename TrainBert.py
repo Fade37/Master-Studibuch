@@ -54,7 +54,7 @@ num_train_steps = len(tf_train_dataset) * num_epochs
 lr_scheduler = PolynomialDecay(
     initial_learning_rate=5e-5, end_learning_rate=0.0, decay_steps=num_train_steps
 )
-optimizer = tf.keras.optimizers.Adam(learning_rate=5e-5)
+optimizer = tf.keras.optimizers.Adam(learning_rate=lr_scheduler)
 
 model.compile(
     optimizer=optimizer,
