@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jun 14 08:31:34 2023
-
-@author: Fade
-"""
-
 from TextPreprocessor import *
 
 text_preprocessor = TextPreprocessor()
