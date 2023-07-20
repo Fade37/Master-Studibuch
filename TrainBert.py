@@ -3,6 +3,8 @@ import tensorflow as tf
 from transformers import AutoTokenizer, TFAutoModelForSequenceClassification, DataCollatorWithPadding
 from datasets import Dataset
 
+#======= Preparation of data =======
+
 df = pd.read_excel(r"D:\OneDrive\Dokumente\MasterThesis\PreAnalysis\data\excel_merged\data_for_training.xlsx")
 tokenizer = AutoTokenizer.from_pretrained("oliverguhr/german-sentiment-bert")
 model = TFAutoModelForSequenceClassification.from_pretrained("oliverguhr/german-sentiment-bert")
@@ -29,7 +31,6 @@ def tokenize_function(df):
 ds = build_dataset(df)
 store_validation_set(ds)
 tokenized_datasets = ds.map(tokenize_function, batched=True)
-
 data_collator = DataCollatorWithPadding(tokenizer=tokenizer, return_tensors="tf")
 
 tf_train_dataset = tokenized_datasets["train"].to_tf_dataset(
@@ -48,6 +49,8 @@ tf_validation_dataset = tokenized_datasets["test"].to_tf_dataset(
     batch_size=8,
 )
 
+#======== training arguments ==========
+
 num_epochs = 5
 num_train_steps = len(tf_train_dataset) * num_epochs
 lr_scheduler = tf.keras.optimizers.schedules.PolynomialDecay(
@@ -55,8 +58,9 @@ lr_scheduler = tf.keras.optimizers.schedules.PolynomialDecay(
     end_learning_rate=0.0, 
     decay_steps=num_train_steps
 )
-
 optimizer = tf.keras.optimizers.Adam(learning_rate=lr_scheduler)
+
+#========== Train & Save ===========
 
 model.compile(
     optimizer=optimizer,
