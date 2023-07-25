@@ -1,35 +1,23 @@
 import pandas as pd
 import tensorflow as tf
 from transformers import AutoTokenizer, TFAutoModelForSequenceClassification, DataCollatorWithPadding
-from datasets import Dataset
+import datetime
+from sklearn.utils import class_weight
+import numpy as np
+from datasets import load_from_disk
 
-#======= Preparation of data =======
 
-df = pd.read_excel(r"D:\OneDrive\Dokumente\MasterThesis\PreAnalysis\data\excel_merged\data_for_training.xlsx")
+#=========== Load Dataset ==============
+
+ds = load_from_disk(r"D:\OneDrive\Dokumente\MasterThesis\training_data")
+
+#=========== Build TF_Dataset =================
+
 tokenizer = AutoTokenizer.from_pretrained("oliverguhr/german-sentiment-bert")
-model = TFAutoModelForSequenceClassification.from_pretrained("oliverguhr/german-sentiment-bert")
-
-def build_dataset(df):
-    sentences = df["Satz"]
-    label = df["Klasse"]
-    label = label.replace(-1, 2).dropna()
-
-    ds = Dataset.from_dict({"sentence": sentences, "label": label})
-    ds = ds.train_test_split(test_size=0.2)
-    return ds
-
-def store_validation_set(ds):
-    validation_sentence = ds["test"]["sentence"]
-    validation_label = ds["test"]["label"]
-    validation_set = {"sentence": validation_sentence, "label": validation_label}
-    validation_set = pd.DataFrame.from_dict(validation_set)
-    validation_set.to_excel(r"D:\OneDrive\Dokumente\MasterThesis\validation_set.xlsx", index=False)
 
 def tokenize_function(df):
     return tokenizer(df["sentence"], truncation=True)
 
-ds = build_dataset(df)
-store_validation_set(ds)
 tokenized_datasets = ds.map(tokenize_function, batched=True)
 data_collator = DataCollatorWithPadding(tokenizer=tokenizer, return_tensors="tf")
 
@@ -41,6 +29,7 @@ tf_train_dataset = tokenized_datasets["train"].to_tf_dataset(
     batch_size=8,
 )
 
+
 tf_validation_dataset = tokenized_datasets["test"].to_tf_dataset(
     columns=["attention_mask", "input_ids", "token_type_ids"],
     label_cols=["labels"],
@@ -49,7 +38,7 @@ tf_validation_dataset = tokenized_datasets["test"].to_tf_dataset(
     batch_size=8,
 )
 
-#======== training arguments ==========
+#================= Training Arguments and Weights ===========================
 
 num_epochs = 5
 num_train_steps = len(tf_train_dataset) * num_epochs
@@ -59,8 +48,16 @@ lr_scheduler = tf.keras.optimizers.schedules.PolynomialDecay(
     decay_steps=num_train_steps
 )
 optimizer = tf.keras.optimizers.Adam(learning_rate=lr_scheduler)
+train_label = ds["train"]["label"]
+class_weights = class_weight.compute_class_weight('balanced', classes = np.unique(train_label), y= train_label)
+weights_dic = {0: class_weights[0], 1: class_weights[1], 2: class_weights[2]}
+log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
-#========== Train & Save ===========
+#================ Train and Save Model ======================
+
+model = TFAutoModelForSequenceClassification.from_pretrained("oliverguhr/german-sentiment-bert")
+model.config.id2label[0]
 
 model.compile(
     optimizer=optimizer,
@@ -71,7 +68,9 @@ model.compile(
 model.fit(
     tf_train_dataset,
     validation_data=tf_validation_dataset,
-    epochs=num_epochs
+    epochs=num_epochs,
+    callbacks=[tensorboard_callback],
+    class_weight = weights_dic
 )
 
 model.save_pretrained(
