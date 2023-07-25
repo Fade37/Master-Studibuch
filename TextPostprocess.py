@@ -3,45 +3,53 @@ import os
 import language_tool_python
 import re
 
+class TextPostprocessor():
 
-def get_all_filenames(dir=r"D:\OneDrive\Dokumente\Praktikumsbericht\Praktikumsbericht RWI\python\data\scores"):
-    all_filenames = os.listdir(dir)
-    return all_filenames
+    def get_all_filenames(self, dir=r"D:\OneDrive\Dokumente\MasterThesis\PreAnalysis\data\excel"):
+        all_filenames = os.listdir(dir)
+        return all_filenames
 
-def get_joint_excel():
-    filenames = get_all_filenames()
-    result = pd.DataFrame([])
+    def get_joint_excel(self):
+        filenames = self.get_all_filenames()
+        result = pd.DataFrame([])
 
-    for filename in filenames:
-        df = pd.read_excel(fr'D:\OneDrive\Dokumente\Praktikumsbericht\Praktikumsbericht RWI\python\data\scores/{filename}')
-        df['Jahr'] = filename[-9:-5]
-        df = df.rename(columns = {"sentences": "Satz", "correction": "Klasse"})
-        result = result.append(df, ignore_index=True)
+        for filename in filenames:
+            df = pd.read_excel(fr'D:\OneDrive\Dokumente\MasterThesis\PreAnalysis\data\excel\{filename}')
+            df['Jahr'] = filename[-9:-5]
+            #df = df.rename(columns = {"sentences": "Satz", "correction": "Klasse"})
+            result = result.append(df, ignore_index=True)
 
-    result = result.loc[:, ~result.columns.str.contains('^Unnamed')]
-    result = result.reset_index(drop=True)
-    # drop duplicates:
-    result = result.drop_duplicates(subset=['Satz'], keep='first')
-    result = result.drop(columns=["score", "classification", "error"])
-    print(result)
-    result.to_excel("D:\OneDrive\Dokumente\MasterThesis\PreAnalysis\data/excel_merged/1976-1986_annotated_lehrer.xlsx", index=False)
+        result = result.loc[:, ~result.columns.str.contains('^Unnamed')]
+        result = result.reset_index(drop=True)
+        print(result)
+        result.to_excel(f"D:\OneDrive\Dokumente\MasterThesis\PreAnalysis\data/excel_merged/all_Lehrerbedarf.xlsx", index=False)
 
-def correction(sentence, tool):
-    removed = re.sub(r"(\n)", ' ', sentence) # removes only indents
-    removed = re.sub("^(\d.*?)+(?=\w)", '', removed) # when a sentence begins with digit, match all character until the next word
-    #removed = re.sub('(\d+(\.\d+)?)', r' \1 ', removed) # find position where digit meets parentheses directly
-    #removed = re.sub(r"[^\S]?(\(.*?\))[^\S]?", r" \1 ", removed)
-    removed = re.sub(' +', ' ', removed)
-    correction = tool.correct(removed)
-    return correction
+    def correction(self, sentence, tool):
+        removed = re.sub("^(\d.*?)+(?=\w)", '', sentence) # when a sentence begins with digit, match all character until the next word
+        removed = re.sub('( ){2,4}', ' ', removed)
+        correction = tool.correct(removed)
+        return correction
+    
+    def replace_compound(self, sentence):
+        keys = ["Lehrerangebot", "Lehrernachfrage", 'Lehrerüberangebot', 'Lehrerüberschusses', 
+                    'Lehrerüberschuss', 'Lehrermangel', 'Lehrerbedarf', 'Lehrerbedarfsprognosen', 
+                    'Lehrerdefizite', 'Lehrerüberschüsse', 'Lehrerangebots', 'Lehrerüberschüssen']
+        values = ["Angebot","Nachfrage", "Überangebot", "Überschusses", "Überschuss", "Mangel", "Bedarf",
+                "Bedarfsprognosen", "Defizite", "Überschüsse", "Angebots", "Überschüssen"]
+        replace_dict = dict(zip(keys, values))
+        for key, value in replace_dict.items():
+            sentence = re.sub(f"({key})", f"{value}", sentence)
+        return sentence
 
-def correct_mistakes(filename="1976-1986_lehrer.xlsx"):
-    df = pd.read_excel(f'D:\OneDrive\Dokumente\MasterThesis\PreAnalysis\data/excel_merged/{filename}')
-    tool = language_tool_python.LanguageTool('de-DE')
-    df['Satz'] = df['Satz'].apply(correction, tool = tool)
-    df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
-    print(df)
-    df.to_excel("D:\OneDrive\Dokumente\MasterThesis\PreAnalysis/data/excel_merged/1976-1986_lehrer_correction.xlsx")
+    def correct_mistakes(self, filename="all_Lehrerbedarf.xlsx"):
+        df = pd.read_excel(f'D:\OneDrive\Dokumente\MasterThesis\PreAnalysis\data/excel_merged/{filename}')
+        tool = language_tool_python.LanguageTool('de-DE')
+        df['Satz'] = df['Satz'].apply(self.correction, tool = tool).apply(self.replace_compound)
+        df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+        print(df)
+        df.to_excel(f"D:\OneDrive\Dokumente\MasterThesis\PreAnalysis/data/excel_merged/all_Lehrerbedarf_correction.xlsx", index=False)
 
-get_joint_excel()
-correct_mistakes()
+if __name__ == "__main__":
+    postprocessor = TextPostprocessor()
+    postprocessor.get_joint_excel()
+    postprocessor.correct_mistakes()

@@ -17,20 +17,24 @@ class TextPreprocessor():
     def text_to_excel(self, filename, excel_name):
         print(f"*** Extracting {filename} ***")
         # reading the text file:
-        with open(fr'D:\OneDrive\Dokumente\Praktikumsbericht\Praktikumsbericht RWI\python\data\roh\{filename[:-4]}.txt', encoding="utf-8") as text:
+        with open(fr'D:\OneDrive\Dokumente\MasterThesis\PreAnalysis\data\Lehrerbedarf\{filename[:-4]}.txt', encoding="utf-8") as text:
             extracted_text = text.read() 
             
-        extracted_text = self.change_abbreviation_points(extracted_text)
-    
+        filtered_text = self.change_abbreviation_points(extracted_text)
+        filtered_text = re.sub(r"(\t+)",'', filtered_text) # remove tabs that interfere with tokenization
+        filtered_text = re.sub(r"(•\s*)", '', filtered_text) # removes •
+        filtered_text = re.sub(r"(-\n+)", '', filtered_text) # removes hyphen, linebreak
+        filtered_text = re.sub(r"(\n)", ' ', filtered_text) # removes linebreak
+
+
         # iterate through file
         filtered = {'paragraphs': []}
-        doc = self.nlp(extracted_text)
+        doc = self.nlp(filtered_text)
         for sent in doc.sents:
             sent = str(sent)
-            sent = re.sub(r"(-\n )", '', sent) # removes hyphen, indent and whitespace
-            sent = re.sub(r"(•)", ' ', sent) # removes hyphen, indent
-            #change @ back to .
-            sent = re.sub(r"@", ".", sent)
+
+            # change @ back to .
+            sent = re.sub("@", ".", sent)
             filtered['paragraphs'].append(
                 {"Satz": sent})
 
